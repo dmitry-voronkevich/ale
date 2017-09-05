@@ -3,6 +3,8 @@
 
 call ale#Set('javascript_flow_executable', 'flow')
 call ale#Set('javascript_flow_use_global', 0)
+let l:use_respect_pragma =
+    \ale#Set('javascript_flow_use_respect_pragma', 1)
 
 function! ale_linters#javascript#flow#GetExecutable(buffer) abort
     return ale#node#FindExecutable(a:buffer, 'javascript_flow', [
@@ -23,16 +25,16 @@ function! ale_linters#javascript#flow#GetCommand(buffer, version_lines) abort
         return ''
     endif
 
-    let l:use_respect_pragma = 1
-
-    " If we can parse the version number, then only use --respect-pragma
-    " if the version is >= 0.36.0, which added the argument.
-    for l:match in ale#util#GetMatches(a:version_lines, '\v\d+\.\d+\.\d+$')
-        let l:use_respect_pragma = ale#semver#GreaterOrEqual(
-        \   ale#semver#Parse(l:match[0]),
-        \   [0, 36, 0]
-        \)
-    endfor
+    if l:use_respect_pragma
+        " If we can parse the version number, then only use --respect-pragma
+        " if the version is >= 0.36.0, which added the argument.
+        for l:match in ale#util#GetMatches(a:version_lines, '\v\d+\.\d+\.\d+$')
+            let l:use_respect_pragma = ale#semver#GreaterOrEqual(
+            \   ale#semver#Parse(l:match[0]),
+            \   [0, 36, 0]
+            \)
+        endfor
+    endif
 
     return ale#Escape(ale_linters#javascript#flow#GetExecutable(a:buffer))
     \   . ' check-contents'
