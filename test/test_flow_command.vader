@@ -9,7 +9,9 @@ After:
 Execute(flow should return a command to run if a .flowconfig file exists):
   call ale#test#SetFilename('flow/a/sub/dummy')
 
-  AssertEqual '''flow'' check-contents --respect-pragma --json --from ale %s', ale_linters#javascript#flow#GetCommand(bufnr('%'), [])
+  AssertEqual 
+  \ '''flow'' check-contents --respect-pragma --json --from ale %s', 
+  \ ale_linters#javascript#flow#GetCommand(bufnr('%'), [])
 
 Execute(flow should should not use --respect-pragma for old versions):
   call ale#test#SetFilename('flow/a/sub/dummy')
@@ -20,6 +22,19 @@ Execute(flow should should not use --respect-pragma for old versions):
   \   'Warning: `flow --version` is deprecated in favor of `flow version`',
   \   'Flow, a static type checker for JavaScript, version 0.27.0',
   \ ])
+
+Execute(flow should should not use --respect-pragma when 
+      \ g:ale_javascript_flow_use_respect_pragma is set to 0):
+  let l:prev_pragma_val=g:ale_javascript_flow_use_respect_pragma
+  let g:ale_javascript_flow_use_respect_pragma=0
+
+  call ale#test#SetFilename('flow/a/sub/dummy')
+
+  let g:ale_javascript_flow_use_respect_pragma=l:prev_pragma_val
+
+  AssertEqual
+  \ '''flow'' check-contents --json --from ale %s',
+  \ ale_linters#javascript#flow#GetCommand(bufnr('%'), [])
 
 Execute(flow should not return a command to run if no .flowconfig file exists):
   call ale#test#SetFilename('flow/b/sub/dummy')
