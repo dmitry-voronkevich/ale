@@ -3,7 +3,7 @@
 
 call ale#Set('javascript_flow_executable', 'flow')
 call ale#Set('javascript_flow_use_global', 0)
-let l:use_respect_pragma =
+let s:use_respect_pragma =
     \ale#Set('javascript_flow_use_respect_pragma', 1)
 
 function! ale_linters#javascript#flow#GetExecutable(buffer) abort
@@ -25,11 +25,11 @@ function! ale_linters#javascript#flow#GetCommand(buffer, version_lines) abort
         return ''
     endif
 
-    if l:use_respect_pragma
+    if s:use_respect_pragma
         " If we can parse the version number, then only use --respect-pragma
         " if the version is >= 0.36.0, which added the argument.
         for l:match in ale#util#GetMatches(a:version_lines, '\v\d+\.\d+\.\d+$')
-            let l:use_respect_pragma = ale#semver#GreaterOrEqual(
+            let s:use_respect_pragma = ale#semver#GreaterOrEqual(
             \   ale#semver#Parse(l:match[0]),
             \   [0, 36, 0]
             \)
@@ -38,7 +38,7 @@ function! ale_linters#javascript#flow#GetCommand(buffer, version_lines) abort
 
     return ale#Escape(ale_linters#javascript#flow#GetExecutable(a:buffer))
     \   . ' check-contents'
-    \   . (l:use_respect_pragma ? ' --respect-pragma': '')
+    \   . (s:use_respect_pragma ? ' --respect-pragma': '')
     \   . ' --json --from ale %s'
 endfunction
 
