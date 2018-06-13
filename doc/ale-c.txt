@@ -31,7 +31,18 @@ g:ale_c_build_dir                                           *g:ale_c_build_dir*
   database (it can be useful if multiple builds are in multiple build
   subdirectories in the project tree).
   This feature is also most useful for the clang tools linters, wrapped
-  aroung LibTooling (namely clang-tidy here)
+  around LibTooling (namely clang-tidy here)
+
+
+g:ale_c_parse_makefile                                 *g:ale_c_parse_makefile*
+                                                       *b:ale_c_parse_makefile*
+  Type: |Number|
+  Default: `0`
+
+  If set to `1`, ALE will run `make -n` to automatically determine flags to
+  set for C or C++ compilers. This can make it easier to determine the correct
+  build flags to use for different files.
+
 
 ===============================================================================
 clang                                                             *ale-c-clang*
@@ -50,6 +61,25 @@ g:ale_c_clang_options                                   *g:ale_c_clang_options*
   Default: `'-std=c11 -Wall'`
 
   This variable can be changed to modify flags given to clang.
+
+
+===============================================================================
+clang-format                                                *ale-c-clangformat*
+
+g:ale_c_clangformat_executable                 *g:ale_c_clangformat_executable*
+                                               *b:ale_c_clangformat_executable*
+  Type: |String|
+  Default: `'clang-format'`
+
+  This variable can be changed to use a different executable for clang-format.
+
+
+g:ale_c_clangformat_options                       *g:ale_c_clangformat_options*
+                                                  *b:ale_c_clangformat_options*
+  Type: |String|
+  Default: `''`
+
+  This variable can be change to modify flags given to clang-format.
 
 
 ===============================================================================
@@ -125,6 +155,41 @@ g:ale_c_cppcheck_options                             *g:ale_c_cppcheck_options*
 
 
 ===============================================================================
+flawfinder                                                   *ale-c-flawfinder*
+
+g:ale_c_flawfinder_executable                   *g:ale_c_flawfinder_executable*
+                                                *b:ale_c_flawfinder_executable*
+  Type: |String|
+  Default: `'flawfinder'`
+
+  This variable can be changed to use a different executable for flawfinder.
+
+
+g:ale_c_flawfinder_minlevel                       *g:ale_c_flawfinder_minlevel*
+                                                  *b:ale_c_flawfinder_minlevel*
+  Type: |Number|
+  Default: `1`
+
+  This variable can be changed to ignore risks under the given risk threshold.
+
+
+g:ale_c_flawfinder_options                                 *g:ale-c-flawfinder*
+                                                           *b:ale-c-flawfinder*
+  Type: |String|
+  Default: `''`
+
+  This variable can be used to pass extra options into the flawfinder command.
+
+g:ale_c_flawfinder_error_severity           *g:ale_c_flawfinder_error_severity*
+                                            *b:ale_c_flawfinder_error_severity*
+  Type: |Number|
+  Default: `6`
+
+  This variable can be changed to set the minimum severity to be treated as an
+  error.  This setting also applies to flawfinder for c++.
+
+
+===============================================================================
 gcc                                                                 *ale-c-gcc*
 
 g:ale_c_gcc_executable                                 *g:ale_c_gcc_executable*
@@ -141,25 +206,6 @@ g:ale_c_gcc_options                                       *g:ale_c_gcc_options*
   Default: `'-std=c11 -Wall'`
 
   This variable can be change to modify flags given to gcc.
-
-
-===============================================================================
-clang-format                                                *ale-c-clangformat*
-
-g:ale_c_clangformat_executable                 *g:ale_c_clangformat_executable*
-                                               *b:ale_c_clangformat_executable*
-  Type: |String|
-  Default: `'clang-format'`
-
-  This variable can be changed to use a different executable for clang-format.
-
-
-g:ale_c_clangformat_options                       *g:ale_c_clangformat_options*
-                                                  *b:ale_c_clangformat_options*
-  Type: |String|
-  Default: `''`
-
-  This variable can be change to modify flags given to clang-format.
 
 
 ===============================================================================

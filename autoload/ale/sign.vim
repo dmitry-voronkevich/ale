@@ -2,6 +2,25 @@ scriptencoding utf8
 " Author: w0rp <devw0rp@gmail.com>
 " Description: Draws error and warning signs into signcolumn
 
+" This flag can be set to some integer to control the maximum number of signs
+" that ALE will set.
+let g:ale_max_signs = get(g:, 'ale_max_signs', -1)
+" This flag can be set to 1 to enable changing the sign column colors when
+" there are errors.
+let g:ale_change_sign_column_color = get(g:, 'ale_change_sign_column_color', 0)
+" These variables dictate what signs are used to indicate errors and warnings.
+let g:ale_sign_error = get(g:, 'ale_sign_error', '>>')
+let g:ale_sign_style_error = get(g:, 'ale_sign_style_error', g:ale_sign_error)
+let g:ale_sign_warning = get(g:, 'ale_sign_warning', '--')
+let g:ale_sign_style_warning = get(g:, 'ale_sign_style_warning', g:ale_sign_warning)
+let g:ale_sign_info = get(g:, 'ale_sign_info', g:ale_sign_warning)
+" This variable sets an offset which can be set for sign IDs.
+" This ID can be changed depending on what IDs are set for other plugins.
+" The dummy sign will use the ID exactly equal to the offset.
+let g:ale_sign_offset = get(g:, 'ale_sign_offset', 1000000)
+" This flag can be set to 1 to keep sign gutter always open
+let g:ale_sign_column_always = get(g:, 'ale_sign_column_always', 0)
+
 if !hlexists('ALEErrorSign')
     highlight link ALEErrorSign error
 endif
@@ -60,55 +79,35 @@ execute 'sign define ALEInfoSign text=' . g:ale_sign_info
 \   . ' texthl=ALEInfoSign linehl=ALEInfoLine'
 sign define ALEDummySign
 
-let s:error_priority = 1
-let s:warning_priority = 2
-let s:info_priority = 3
-let s:style_error_priority = 4
-let s:style_warning_priority = 5
-
 function! ale#sign#GetSignName(sublist) abort
-    let l:priority = s:style_warning_priority
+    let l:priority = g:ale#util#style_warning_priority
 
     " Determine the highest priority item for the line.
     for l:item in a:sublist
-        if l:item.type is# 'I'
-            let l:item_priority = s:info_priority
-        elseif l:item.type is# 'W'
-            if get(l:item, 'sub_type', '') is# 'style'
-                let l:item_priority = s:style_warning_priority
-            else
-                let l:item_priority = s:warning_priority
-            endif
-        else
-            if get(l:item, 'sub_type', '') is# 'style'
-                let l:item_priority = s:style_error_priority
-            else
-                let l:item_priority = s:error_priority
-            endif
-        endif
+        let l:item_priority = ale#util#GetItemPriority(l:item)
 
-        if l:item_priority < l:priority
+        if l:item_priority > l:priority
             let l:priority = l:item_priority
         endif
     endfor
 
-    if l:priority is# s:error_priority
+    if l:priority is# g:ale#util#error_priority
         return 'ALEErrorSign'
     endif
 
-    if l:priority is# s:warning_priority
+    if l:priority is# g:ale#util#warning_priority
         return 'ALEWarningSign'
     endif
 
-    if l:priority is# s:style_error_priority
+    if l:priority is# g:ale#util#style_error_priority
         return 'ALEStyleErrorSign'
     endif
 
-    if l:priority is# s:style_warning_priority
+    if l:priority is# g:ale#util#style_warning_priority
         return 'ALEStyleWarningSign'
     endif
 
-    if l:priority is# s:info_priority
+    if l:priority is# g:ale#util#info_priority
         return 'ALEInfoSign'
     endif
 
@@ -184,16 +183,6 @@ function! s:GroupLoclistItems(buffer, loclist) abort
     return l:grouped_items
 endfunction
 
-function! ale#sign#SetSignColumnHighlight(has_problems) abort
-    highlight clear SignColumn
-
-    if a:has_problems
-        highlight link SignColumn ALESignColumnWithErrors
-    else
-        highlight link SignColumn ALESignColumnWithoutErrors
-    endif
-endfunction
-
 function! s:UpdateLineNumbers(buffer, current_sign_list, loclist) abort
     let l:line_map = {}
     let l:line_numbers_changed = 0
@@ -219,29 +208,47 @@ function! s:UpdateLineNumbers(buffer, current_sign_list, loclist) abort
     endif
 endfunction
 
-function! s:BuildSignMap(current_sign_list, grouped_items) abort
+function! s:BuildSignMap(buffer, current_sign_list, grouped_items) abort
+    let l:max_signs = ale#Var(a:buffer, 'max_signs')
+
+    if l:max_signs is 0
+        let l:selected_grouped_items = []
+    elseif type(l:max_signs) is type(0) && l:max_signs > 0
+        let l:selected_grouped_items = a:grouped_items[:l:max_signs - 1]
+    else
+        let l:selected_grouped_items = a:grouped_items
+    endif
+
     let l:sign_map = {}
     let l:sign_offset = g:ale_sign_offset
 
     for [l:line, l:sign_id, l:name] in a:current_sign_list
-        let l:sign_map[l:line] = {
-        \   'current_id': l:sign_id,
-        \   'current_name': l:name,
+        let l:sign_info = get(l:sign_map, l:line, {
+        \   'current_id_list': [],
+        \   'current_name_list': [],
         \   'new_id': 0,
         \   'new_name': '',
         \   'items': [],
-        \}
+        \})
 
+        " Increment the sign offset for new signs, by the maximum sign ID.
         if l:sign_id > l:sign_offset
             let l:sign_offset = l:sign_id
         endif
+
+        " Remember the sign names and IDs in separate Lists, so they are easy
+        " to work with.
+        call add(l:sign_info.current_id_list, l:sign_id)
+        call add(l:sign_info.current_name_list, l:name)
+
+        let l:sign_map[l:line] = l:sign_info
     endfor
 
-    for l:group in a:grouped_items
+    for l:group in l:selected_grouped_items
         let l:line = l:group[0].lnum
         let l:sign_info = get(l:sign_map, l:line, {
-        \   'current_id': 0,
-        \   'current_name': '',
+        \   'current_id_list': [],
+        \   'current_name_list': [],
         \   'new_id': 0,
         \   'new_name': '',
         \   'items': [],
@@ -250,11 +257,18 @@ function! s:BuildSignMap(current_sign_list, grouped_items) abort
         let l:sign_info.new_name = ale#sign#GetSignName(l:group)
         let l:sign_info.items = l:group
 
-        if l:sign_info.current_name isnot# l:sign_info.new_name
+        let l:index = index(
+        \   l:sign_info.current_name_list,
+        \   l:sign_info.new_name
+        \)
+
+        if l:index >= 0
+            " We have a sign with this name already, so use the same ID.
+            let l:sign_info.new_id = l:sign_info.current_id_list[l:index]
+        else
+            " This sign name replaces the previous name, so use a new ID.
             let l:sign_info.new_id = l:sign_offset + 1
             let l:sign_offset += 1
-        else
-            let l:sign_info.new_id = l:sign_info.current_id
         endif
 
         let l:sign_map[l:line] = l:sign_info
@@ -288,7 +302,7 @@ function! ale#sign#GetSignCommands(buffer, was_sign_set, sign_map) abort
                 let l:item.sign_id = l:info.new_id
             endfor
 
-            if l:info.new_id isnot l:info.current_id
+            if index(l:info.current_id_list, l:info.new_id) < 0
                 call add(l:command_list, 'sign place '
                 \   . (l:info.new_id)
                 \   . ' line=' . l:line_str
@@ -301,12 +315,14 @@ function! ale#sign#GetSignCommands(buffer, was_sign_set, sign_map) abort
 
     " Remove signs without new IDs.
     for l:info in values(a:sign_map)
-        if l:info.current_id && l:info.current_id isnot l:info.new_id
-            call add(l:command_list, 'sign unplace '
-            \   . (l:info.current_id)
-            \   . ' buffer=' . a:buffer
-            \)
-        endif
+        for l:current_id in l:info.current_id_list
+            if l:current_id isnot l:info.new_id
+                call add(l:command_list, 'sign unplace '
+                \   . l:current_id
+                \   . ' buffer=' . a:buffer
+                \)
+            endif
+        endfor
     endfor
 
     " Remove the dummy sign to close the sign column if we need to.
@@ -339,7 +355,11 @@ function! ale#sign#SetSigns(buffer, loclist) abort
     let l:grouped_items = s:GroupLoclistItems(a:buffer, a:loclist)
 
     " Build a map of current and new signs, with the lines as the keys.
-    let l:sign_map = s:BuildSignMap(l:current_sign_list, l:grouped_items)
+    let l:sign_map = s:BuildSignMap(
+    \   a:buffer,
+    \   l:current_sign_list,
+    \   l:grouped_items,
+    \)
 
     let l:command_list = ale#sign#GetSignCommands(
     \   a:buffer,
@@ -347,7 +367,19 @@ function! ale#sign#SetSigns(buffer, loclist) abort
     \   l:sign_map,
     \)
 
+    " Change the sign column color if the option is on.
+    if g:ale_change_sign_column_color && !empty(a:loclist)
+        highlight clear SignColumn
+        highlight link SignColumn ALESignColumnWithErrors
+    endif
+
     for l:command in l:command_list
         silent! execute l:command
     endfor
+
+    " Reset the sign column color when there are no more errors.
+    if g:ale_change_sign_column_color && empty(a:loclist)
+        highlight clear SignColumn
+        highlight link SignColumn ALESignColumnWithoutErrors
+    endif
 endfunction

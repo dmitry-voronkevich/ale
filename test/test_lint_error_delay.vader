@@ -1,14 +1,17 @@
 Before:
-  Save g:ale_filetype_blacklist
+  runtime autoload/ale.vim
 
-  " Delete some variable which should be defined.
-  unlet! g:ale_filetype_blacklist
+  " Replace one of the key ALE functions and make it throw.
+  function! ale#FileTooLarge(buffer) abort
+    throw 'broken'
+  endfunction
 
 After:
-  Restore
+  runtime autoload/ale.vim
 
   call ale#ResetErrorDelays()
 
+Given foobar(An empty file):
 Execute(ALE should stop queuing for a while after exceptions are thrown):
   AssertThrows call ale#Queue(100)
   call ale#Queue(100)
@@ -16,10 +19,6 @@ Execute(ALE should stop queuing for a while after exceptions are thrown):
 Execute(ALE should stop linting for a while after exceptions are thrown):
   AssertThrows call ale#Lint()
   call ale#Lint()
-
-Execute(ALE should stop queuing echo messages for a while after exceptions are thrown):
-  AssertThrows call ale#cursor#EchoCursorWarningWithDelay()
-  call ale#cursor#EchoCursorWarningWithDelay()
 
 Execute(ALE should stop echoing messages for a while after exceptions are thrown):
   AssertThrows call ale#cursor#EchoCursorWarning()

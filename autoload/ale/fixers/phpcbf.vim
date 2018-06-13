@@ -3,7 +3,7 @@
 
 call ale#Set('php_phpcbf_standard', '')
 call ale#Set('php_phpcbf_executable', 'phpcbf')
-call ale#Set('php_phpcbf_use_global', 0)
+call ale#Set('php_phpcbf_use_global', get(g:, 'ale_use_global_executables', 0))
 
 function! ale#fixers#phpcbf#GetExecutable(buffer) abort
     return ale#node#FindExecutable(a:buffer, 'php_phpcbf', [
@@ -19,6 +19,6 @@ function! ale#fixers#phpcbf#Fix(buffer) abort
     \   ? '--standard=' . l:standard
     \   : ''
     return {
-    \   'command': ale#Escape(l:executable) . ' --stdin-path=%s ' . l:standard_option
+    \   'command': ale#Escape(l:executable) . ' --stdin-path=%s ' . l:standard_option . ' -'
     \}
 endfunction
