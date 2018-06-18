@@ -20,6 +20,13 @@ function! ale_linters#java#javac#GetImportPaths(buffer) abort
         return l:classpath_command
     endif
 
+    let l:buck_path = ale#path#FindNearestFile(a:buffer, 'BUCK')
+    if !empty(l:buck_path) && executable('buck')
+      let l:file_path = expand('%:p:h')
+      return ale#path#CdString(l:file_path)
+      \ . 'buck audit classpath `buck query ' . l:file_path . '`'
+    endif
+
     return ''
 endfunction
 
